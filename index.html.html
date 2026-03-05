@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weekly Leads Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* ─── RESET & ROOT ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #f4f5f7;
+    --surface:     #ffffff;
+    --surface2:    #f8f9fa;
+    --border:      #e2e5ea;
+    --primary:     #1a3c34;       /* dark forest green */
+    --primary-lt:  #245c50;
+    --accent:      #2e7d62;
+    --accent2:     #4caf8a;
+    --charcoal:    #2c3340;
+    --text:        #1e2430;
+    --text-muted:  #6b7585;
+    --text-light:  #9aa3b0;
+    --red:         #c0392b;
+    --red-lt:      #fdecea;
+    --green:       #1a7a56;
+    --green-lt:    #e6f4ee;
+    --yellow:      #d4a017;
+    --yellow-lt:   #fdf8ec;
+    --shadow-sm:   0 1px 3px rgba(0,0,0,.07);
+    --shadow:      0 2px 10px rgba(0,0,0,.09);
+    --shadow-lg:   0 4px 24px rgba(0,0,0,.12);
+    --radius:      8px;
+    --radius-lg:   12px;
+    --font-head:   'Playfair Display', Georgia, serif;
+    --font-body:   'Source Sans 3', 'Helvetica Neue', sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+
+  html, body {
+    height: 100%;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────────────────────────────── */
+  .app-wrapper { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ─── HEADER ─────────────────────────────────────────────────────────── */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 36px; height: 36px;
+    background: var(--accent2);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .brand-name { font-family: var(--font-head); font-size: 1.2rem; letter-spacing: .02em; }
+  .brand-sub { font-size: .72rem; color: rgba(255,255,255,.55); letter-spacing: .06em; text-transform: uppercase; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--radius);
+    font-family: var(--font-body); font-size: .82rem; font-weight: 600;
+    cursor: pointer; border: none; transition: all .18s;
+    white-space: nowrap;
+  }
+  .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2); }
+  .btn-ghost:hover { background: rgba(255,255,255,.2); }
+  .btn-primary { background: var(--accent2); color: #fff; }
+  .btn-primary:hover { background: #3db87a; }
+  .btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #a93226; }
+  .btn-sm { padding: 5px 10px; font-size: .78rem; }
+
+  /* ─── TABS ───────────────────────────────────────────────────────────── */
+  .tabs-bar {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    padding: 14px 24px;
+    font-family: var(--font-body);
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .02em;
+    margin-bottom: -2px;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--accent); }
+
+  /* ─── MAIN AREA ──────────────────────────────────────────────────────── */
+  main { flex: 1; padding: 28px 32px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ─── UPLOAD ZONE ────────────────────────────────────────────────────── */
+  #upload-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,60,52,.92);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #upload-overlay h2 {
+    font-family: var(--font-head);
+    color: #fff;
+    font-size: 1.8rem;
+  }
+  #upload-overlay p { color: rgba(255,255,255,.65); font-size: .95rem; }
+  .drop-zone {
+    width: 480px; max-width: 90vw;
+    border: 2px dashed rgba(255,255,255,.35);
+    border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: rgba(255,255,255,.05);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent2);
+    background: rgba(76,175,138,.12);
+  }
+  .drop-zone-icon { font-size: 3rem; margin-bottom: 12px; }
+  .drop-zone p { color: rgba(255,255,255,.75); margin-bottom: 16px; }
+  #csv-file-input { display: none; }
+
+  /* ─── TOOLBAR ────────────────────────────────────────────────────────── */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .toolbar-group { display: flex; align-items: center; gap: 8px; }
+  .toolbar-sep { width: 1px; height: 28px; background: var(--border); }
+
+  label.lbl { font-size: .78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  select.sel, input[type=text].sel {
+    padding: 7px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--text);
+    background: var(--surface);
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .2s;
+    min-width: 160px;
+  }
+  select.sel:focus, input[type=text].sel:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .sel-wrap { position: relative; }
+  .sel-wrap::after {
+    content: '▾';
+    position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: .75rem;
+  }
+
+  /* ─── METRIC CARDS ───────────────────────────────────────────────────── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .metric-card.mc-total::before   { background: var(--charcoal); }
+  .metric-card.mc-pnc::before     { background: var(--green); }
+  .metric-card.mc-nq::before      { background: var(--red); }
+  .metric-card.mc-pnc-pct::before { background: var(--accent2); }
+  .metric-card.mc-nq-pct::before  { background: var(--yellow); }
+  .metric-card.mc-kpi::before     { background: var(--primary); }
+
+  /* KPI card — larger, prominent */
+  .metric-card.mc-kpi {
+    border-width: 2px;
+    background: var(--primary);
+    color: #fff;
+  }
+  .metric-card.mc-kpi .metric-label { color: rgba(255,255,255,.65); }
+  .metric-card.mc-kpi .metric-value { color: #fff; font-size: 2.5rem; }
+  .metric-card.mc-kpi .metric-sub   { color: rgba(255,255,255,.55); }
+  /* KPI colour overrides applied via inline style on the card itself */
+  .metric-card.mc-kpi.kpi-green { background: var(--green); border-color: #145f43; }
+  .metric-card.mc-kpi.kpi-yellow { background: #b07d10; border-color: #8a6008; }
+  .metric-card.mc-kpi.kpi-red   { background: var(--red);   border-color: #9b2d22; }
+
+  /* Goal progress bar inside KPI card */
+  .kpi-goal-bar-wrap {
+    margin-top: 10px;
+    background: rgba(255,255,255,.2);
+    border-radius: 6px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .kpi-goal-bar {
+    height: 100%;
+    background: rgba(255,255,255,.85);
+    border-radius: 6px;
+    transition: width .5s ease;
+  }
+  .kpi-goal-label {
+    font-size: .7rem;
+    color: rgba(255,255,255,.6);
+    margin-top: 4px;
+  }
+
+  .metric-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin-bottom: 6px; }
+  .metric-value { font-size: 2.1rem; font-weight: 700; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: .78rem; color: var(--text-muted); margin-top: 4px; }
+  .metric-delta {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .75rem; font-weight: 600;
+    margin-top: 8px; padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .delta-up   { background: var(--green-lt);  color: var(--green); }
+  .delta-down { background: var(--red-lt);    color: var(--red); }
+  .delta-flat { background: #f0f0f0;          color: var(--text-muted); }
+
+  /* ─── CHARTS GRID ────────────────────────────────────────────────────── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .charts-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .chart-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .chart-card.span-2 { grid-column: span 2; }
+  .chart-card.span-3 { grid-column: span 3; }
+  .chart-title {
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-wrap-tall { position: relative; height: 300px; }
+
+  /* ─── WEEK TABLE ─────────────────────────────────────────────────────── */
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    color: var(--primary);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .84rem;
+  }
+  .data-table thead th {
+    background: var(--primary);
+    color: #fff;
+    padding: 10px 14px;
+    font-weight: 600;
+    text-align: left;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .data-table thead th:first-child { border-radius: 6px 0 0 0; }
+  .data-table thead th:last-child  { border-radius: 0 6px 0 0; }
+  .data-table tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+  .data-table tbody tr:hover { background: var(--surface2); }
+  .data-table tbody td { padding: 9px 14px; color: var(--text); }
+  .data-table tbody tr:last-child { border-bottom: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+  }
+  .badge-pnc { background: var(--green-lt); color: var(--green); }
+  .badge-nq  { background: var(--red-lt);   color: var(--red); }
+
+  /* ─── NO DATA PLACEHOLDER ────────────────────────────────────────────── */
+  .no-data {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 64px 32px; text-align: center; color: var(--text-muted);
+  }
+  .no-data-icon { font-size: 3rem; margin-bottom: 12px; opacity: .4; }
+  .no-data h3 { font-family: var(--font-head); font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }
+  .no-data p { font-size: .85rem; max-width: 320px; }
+
+  /* ─── PNC LIST TABLE ────────────────────────────────────────────────── */
+  .pnc-list-section {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .pnc-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 20px 22px 0;
+  }
+  .pnc-list-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pnc-list-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--green-lt);
+    color: var(--green);
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+  }
+  .pnc-list-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .search-input-wrap .search-icon {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: .9rem;
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding: 7px 12px 7px 32px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color .2s;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .search-input::placeholder { color: var(--text-light); }
+
+  /* Sortable table headers */
+  .data-table thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .data-table thead th.sortable:hover { background: var(--primary-lt); }
+  .sort-icon {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: .65rem;
+    opacity: .5;
+    vertical-align: middle;
+    transition: opacity .15s;
+  }
+  .data-table thead th.sort-asc  .sort-icon,
+  .data-table thead th.sort-desc .sort-icon { opacity: 1; }
+  .sort-icon-asc::after  { content: ' ▲'; }
+  .sort-icon-desc::after { content: ' ▼'; }
+  .sort-icon-none::after { content: ' ⇅'; }
+
+  /* Appt scheduled badge colours */
+  .appt-scheduled   { color: var(--green); font-weight: 600; }
+  .appt-unscheduled { color: var(--text-muted); }
+
+  /* Table scroll wrapper */
+  .table-scroll { overflow-x: auto; }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    header { padding: 0 16px; }
+    main { padding: 20px 16px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-card.span-2 { grid-column: span 1; }
+    .charts-grid-3 { grid-template-columns: 1fr; }
+    .chart-card.span-3 { grid-column: span 1; }
+  }
+  @media (max-width: 600px) {
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .toolbar { gap: 8px; }
+  }
+
+  /* ─── LOADING SPINNER ────────────────────────────────────────────────── */
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,.2);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── DATA STATUS BAR ────────────────────────────────────────────────── */
+  .data-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .78rem; color: rgba(255,255,255,.7);
+  }
+  .data-status .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  /* ─── MEMORY BADGE ──────────────────────────────────────────────────── */
+  .memory-badge {
+    display: none;                  /* shown only when loaded from storage */
+    align-items: center; gap: 6px;
+    background: rgba(76,175,138,.18);
+    border: 1px solid rgba(76,175,138,.4);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: .03em;
+    white-space: nowrap;
+  }
+  .memory-badge.visible { display: flex; }
+  .memory-badge-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent2);
+    flex-shrink: 0;
+  }
+
+  .week-nav { display: flex; align-items: center; gap: 6px; }
+  .week-nav .nav-btn {
+    width: 32px; height: 32px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: var(--text-muted);
+    transition: all .15s;
+  }
+  .week-nav .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .week-nav .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- ─── UPLOAD OVERLAY ──────────────────────────────────────────────────── -->
+<div id="upload-overlay">
+  <div class="brand" style="margin-bottom:8px;">
+    <div class="brand-icon">⚖️</div>
+    <div>
+      <div class="brand-name" style="color:#fff;">Weekly Leads Report</div>
+      <div class="brand-sub">2026 · Lawmatics Analytics</div>
+    </div>
+  </div>
+  <h2>Upload Your CSV File</h2>
+  <p>Export your 2026 leads from Lawmatics and upload here to begin.</p>
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-zone-icon">📂</div>
+    <p>Drag & drop your CSV file here<br/>or click to browse</p>
+    <label class="btn btn-primary" for="csv-file-input" style="cursor:pointer;">Browse File</label>
+    <input type="file" id="csv-file-input" accept=".csv,text/csv" />
+  </div>
+  <p id="upload-status" style="color:rgba(255,255,255,.5);font-size:.82rem;margin-top:8px;"></p>
+</div>
+
+<!-- ─── APP ────────────────────────────────────────────────────────────── -->
+<div class="app-wrapper" id="app" style="display:none;">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚖️</div>
+      <div>
+        <div class="brand-name">Weekly Leads Report</div>
+        <div class="brand-sub">2026 · Lawmatics Analytics</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="data-status" id="data-status">
+        <div class="dot"></div>
+        <span id="data-status-text">Loading…</span>
+      </div>
+      <!-- Shown when data is loaded from localStorage on page reload -->
+      <div class="memory-badge" id="memory-badge">
+        <div class="memory-badge-dot"></div>
+        Data Loaded from Memory
+      </div>
+      <div style="width:1px;height:28px;background:rgba(255,255,255,.2);"></div>
+      <button class="btn btn-ghost btn-sm" onclick="handleUploadNew()">⬆ Upload New CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearData()">🗑 Clear Data</button>
+      <button class="btn btn-primary btn-sm" onclick="downloadPDF()">⬇ Download PDF</button>
+    </div>
+  </header>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-page="weekly" onclick="switchTab('weekly')">📅 Weekly Dashboard</button>
+    <button class="tab-btn" data-page="monthly" onclick="switchTab('monthly')">📆 Monthly Dashboard</button>
+  </div>
+
+  <main>
+
+    <!-- ══════ PAGE 1: WEEKLY ═══════════════════════════════════════════════ -->
+    <div class="page active" id="page-weekly">
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <span class="lbl">Week</span>
+          <div class="week-nav">
+            <button class="nav-btn" id="btn-prev-week" onclick="prevWeek()">‹</button>
+            <div class="sel-wrap">
+              <select class="sel" id="week-selector" onchange="onWeekChange()" style="min-width:200px;"></select>
+            </div>
+            <button class="nav-btn" id="btn-next-week" onclick="nextWeek()">›</button>
+          </div>
+        </div>
+        <div class="toolbar-sep"></div>
+        <div class="toolbar-group">
+          <span class="lbl">Team Member</span>
+          <div class="sel-wrap">
+            <select class="sel" id="w-member-filter" onchange="renderWeekly()"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="metrics-grid" id="w-metrics"></div>
+
+      <!-- Charts Row 1 -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">PNC vs No Qualified — Selected Week</div>
+          <div class="chart-wrap"><canvas id="chart-w-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">PNC Trend — Last 6 Weeks</div>
+          <div class="chart-wrap"><canvas id="chart-w-trend"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="charts-grid">
+        <div class="chart-card span-2">
+          <div class="chart-title">Performance by Intake Team Member — Selected Week</div>
+          <div class="chart-wrap-tall"><canvas id="chart-w-members"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ── PNC LIST — SELECTED WEEK ─────────────────────────────────── -->
+      <div class="pnc-list-section">
+
+        <!-- Header row: title + count + export button -->
+        <div class="pnc-list-header">
+          <div class="pnc-list-title-row">
+            <div class="section-title" style="margin:0;padding:0;border:none;">
+              PNC List — Selected Week
+            </div>
+            <span class="pnc-list-count" id="pnc-list-count">0 leads</span>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="exportPNCListCSV()">
+            ⬇ Download This Week PNC List (.csv)
+          </button>
+        </div>
+
+        <!-- Search bar -->
+        <div class="pnc-list-controls">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              class="search-input"
+              id="pnc-search"
+              placeholder="Search by name…"
+              oninput="renderPNCList()"
+            />
+          </div>
+          <span style="font-size:.78rem;color:var(--text-muted);" id="pnc-search-info"></span>
+        </div>
+
+        <!-- Table -->
+        <div class="table-scroll">
+          <table class="data-table" id="pnc-list-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="date"         onclick="sortPNCList('date')">         Date          <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="firstName"    onclick="sortPNCList('firstName')">    First Name     <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="lastName"     onclick="sortPNCList('lastName')">     Last Name      <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="practiceArea" onclick="sortPNCList('practiceArea')"> Practice Area  <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="appt"         onclick="sortPNCList('appt')">         Appointment Scheduled <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="office"       onclick="sortPNCList('office')">       Office Location <span class="sort-icon sort-icon-none"></span></th>
+                <th class="sortable" data-col="intakeMember" onclick="sortPNCList('intakeMember')"> Intake Team Member <span class="sort-icon sort-icon-none"></span></th>
+              </tr>
+            </thead>
+            <tbody id="pnc-list-body">
+              <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">
+                No data loaded yet.
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /pnc-list-section -->
+
+    </div><!-- /page-weekly -->
+
+    <!-- ══════ PAGE 2: MONTHLY ═══════════════════════════════════════════════ -->
+    <div class="page" id="page-monthly">
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <span class="lbl">Month</span>
+          <div class="sel-wrap">
+            <select class="sel" id="month-selector" onchange="renderMonthly()"></select>
+          </div>
+        </div>
+        <div class="toolbar-sep"></div>
+        <div class="toolbar-group">
+          <span class="lbl">Team Member</span>
+          <div class="sel-wrap">
+            <select class="sel" id="m-member-filter" onchange="renderMonthly()"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="metrics-grid" id="m-metrics"></div>
+
+      <!-- Weekly breakdown table -->
+      <div style="background:var(--surface);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:20px;">
+        <div class="section-title">Weekly Breakdown</div>
+        <div id="m-week-table"></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Weekly Trend Inside Month</div>
+          <div class="chart-wrap-tall"><canvas id="chart-m-trend"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Intake Member Contribution</div>
+          <div class="chart-wrap-tall"><canvas id="chart-m-members"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /page-monthly -->
+
+  </main>
+</div><!-- /app-wrapper -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   LAWMATICS LEAD ANALYTICS DASHBOARD — 2026
+   Single-file HTML/CSS/JS. Chart.js via CDN.
+   ════════════════════════════════════════════════════════════════════════ */
+
+// ─── GLOBALS ──────────────────────────────────────────────────────────────
+let RAW_DATA       = [];   // All parsed CSV rows
+let WEEKS          = [];   // Array of {label, start, end, key}
+let MONTHS         = [];   // Array of {label, year, month (0-based), key}
+let currentWeekIdx = 0;
+
+// PNC list sort state
+let pncSortCol = 'date';   // current sort column key
+let pncSortDir = 'asc';    // 'asc' | 'desc'
+
+// Chart instances
+let chartWBar, chartWTrend, chartWMembers, chartMTrend, chartMMem;
+
+// Color palette
+const C_GREEN  = '#1a7a56';
+const C_RED    = '#c0392b';
+const C_ACCENT = '#2e7d62';
+const C_BLUE   = '#2563ab';
+const C_AMBER  = '#d97706';
+const C_PURPLE = '#7c3aed';
+const MEMBER_COLORS = ['#1a7a56','#2563ab','#7c3aed','#d97706','#c0392b','#0891b2','#65a30d','#db2777'];
+
+// ─── STORAGE KEY ───────────────────────────────────────────────────────────
+const STORAGE_KEY = 'weeklyLeadsData';
+
+// ─── BOOT ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  setupDropZone();
+
+  // ── Step 1: Check if localStorage contains saved data ──────────────────
+  const saved = loadFromStorage();
+
+  if (saved && saved.length > 0) {
+    // ── Step 2a: Data found — restore it, skip upload screen ─────────────
+    RAW_DATA = saved;
+
+    const pnc = RAW_DATA.filter(r => r.status === 'PNC').length;
+    const nq  = RAW_DATA.filter(r => r.status === 'NQ').length;
+    console.log('─────────────────────────────────────────────');
+    console.log('[WeeklyLeadsReport] 💾 Data restored from localStorage (key: weeklyLeadsData)');
+    console.log(`[WeeklyLeadsReport] 📋 Total rows restored:           ${RAW_DATA.length}`);
+    console.log(`[WeeklyLeadsReport] 🟢 Total PNC counted:             ${pnc}`);
+    console.log(`[WeeklyLeadsReport] 🔴 Total No Qualified counted:    ${nq}`);
+    console.log('─────────────────────────────────────────────');
+
+    // Show the "Data Loaded from Memory" indicator in the header
+    document.getElementById('memory-badge').classList.add('visible');
+
+    initDashboard();
+  }
+  // ── Step 2b: No data — upload overlay stays visible (it's shown by default)
+});
+
+// ─── STORAGE HELPERS ───────────────────────────────────────────────────────
+
+/**
+ * Load data from localStorage and rehydrate Date objects.
+ *
+ * THE CRITICAL FIX:
+ * JSON.stringify() converts Date objects to ISO strings (e.g. "2026-01-05T00:00:00.000Z").
+ * JSON.parse() restores them as plain strings — NOT Date objects.
+ * Any date comparison (r.date >= w.start) then silently fails because
+ * string-vs-Date comparison is always false.
+ *
+ * Solution: after JSON.parse(), convert every row.date string back to a
+ * real Date object using `new Date(row.date)`.
+ */
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+    // Rehydrate: convert date strings → Date objects
+    const rehydrated = parsed.map(row => ({
+      ...row,
+      date: new Date(row.date),   // <── THE FIX: restore proper Date object
+    }));
+
+    // Validate: make sure dates parsed correctly (filter any corrupt rows)
+    const valid = rehydrated.filter(row => !isNaN(row.date.getTime()));
+
+    console.log(`[WeeklyLeadsReport] Rehydrated ${valid.length}/${parsed.length} rows from localStorage`);
+    return valid.length > 0 ? valid : null;
+
+  } catch (e) {
+    console.warn('[WeeklyLeadsReport] ⚠ Failed to load from localStorage:', e);
+    return null;
+  }
+}
+
+/**
+ * Save parsed data array to localStorage under the exact key "weeklyLeadsData".
+ * Dates are automatically serialized to ISO strings by JSON.stringify().
+ * They are rehydrated back to Date objects by loadFromStorage().
+ */
+function saveToStorage(data) {
+  try {
+    const json = JSON.stringify(data);
+    localStorage.setItem(STORAGE_KEY, json);
+    console.log(`[WeeklyLeadsReport] ✅ Saved ${data.length} rows to localStorage (key: ${STORAGE_KEY})`);
+    console.log(`[WeeklyLeadsReport] 💽 Storage size: ~${(json.length / 1024).toFixed(1)} KB`);
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      console.warn('[WeeklyLeadsReport] ⚠ localStorage quota exceeded — data not persisted');
+    } else {
+      console.warn('[WeeklyLeadsReport] ⚠ Failed to save to localStorage:', e);
+    }
+  }
+}
+
+/**
+ * Clear Data button handler.
+ * Removes the localStorage entry and reloads the page.
+ * On reload the boot sequence finds no data and shows the upload screen.
+ */
+function clearData() {
+  if (!confirm('Clear all saved data? The page will reload and you will need to upload your CSV again.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  console.log(`[WeeklyLeadsReport] 🗑 Cleared localStorage key: ${STORAGE_KEY}`);
+  window.location.reload();   // Full reload → boot finds no data → upload screen shown
+}
+
+// ─── DROP ZONE ─────────────────────────────────────────────────────────────
+function setupDropZone() {
+  const dz = document.getElementById('drop-zone');
+  const fi = document.getElementById('csv-file-input');
+
+  dz.addEventListener('click', (e) => { if (e.target !== fi) fi.click(); });
+  fi.addEventListener('change', () => { if (fi.files[0]) processFile(fi.files[0]); });
+
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  });
+}
+
+function handleUploadNew() {
+  document.getElementById('upload-overlay').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ─── CSV PARSING ───────────────────────────────────────────────────────────
+function processFile(file) {
+  const statusEl = document.getElementById('upload-status');
+  statusEl.textContent = '⏳ Parsing CSV…';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = parseCSV(e.target.result);
+      if (!data.length) {
+        statusEl.textContent = '⚠ No valid 2026 rows found. Check your CSV format.';
+        return;
+      }
+
+      // Store in memory
+      RAW_DATA = data;
+
+      // ── Persist to localStorage under "weeklyLeadsData" ─────────────────
+      saveToStorage(RAW_DATA);
+
+      // Hide memory badge (this is fresh data, not from storage)
+      document.getElementById('memory-badge').classList.remove('visible');
+
+      statusEl.textContent = `✅ Loaded ${data.length} records. Initializing dashboard…`;
+      setTimeout(() => initDashboard(), 500);
+
+    } catch (err) {
+      console.error('[WeeklyLeadsReport] Parse error:', err);
+      statusEl.textContent = '⚠ Parse error: ' + err.message;
+    }
+  };
+  reader.onerror = () => {
+    statusEl.textContent = '⚠ Could not read file. Please try again.';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  // ── Normalize line endings ──────────────────────────────────────────────
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  if (!lines.length) return [];
+
+  // ── Parse header row (handles quoted headers with commas inside) ────────
+  const rawHeaders = parseCSVRow(lines[0]);
+  // Normalize: trim whitespace, collapse multiple spaces, lowercase
+  const headers = rawHeaders.map(h => h.trim().replace(/\s+/g, ' ').toLowerCase());
+
+  console.log('[WeeklyLeadsReport] CSV Headers detected:', rawHeaders);
+
+  // ── Generic column-finder: case-insensitive, keyword substring match ────
+  const ci = (keywords) => {
+    for (const kw of keywords) {
+      const idx = headers.findIndex(h => h.includes(kw.toLowerCase()));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  // ── Dynamic status column detection ────────────────────────────────────
+  // Matches headers containing "pnc", "lead status", "status", "qualified" etc.
+  // Priority: prefer columns that include "pnc" or "lead status" first.
+  const statusColIdx = ci([
+    'pnc (potential new client)', // exact Lawmatics export name
+    'pnc',                        // any column containing "pnc"
+    'lead status',                // fallback: "lead status"
+    'status',                     // further fallback
+  ]);
+
+  if (statusColIdx === -1) {
+    console.warn('[WeeklyLeadsReport] ⚠ Could not find a status column. Headers were:', headers);
+  } else {
+    console.log(`[WeeklyLeadsReport] Status column detected at index ${statusColIdx}: "${rawHeaders[statusColIdx]}"`);
+  }
+
+  // ── All other columns ───────────────────────────────────────────────────
+  const COL = {
+    status:       statusColIdx,
+    source:       ci(['source']),
+    firstName:    ci(['first name', 'firstname']),
+    lastName:     ci(['last name', 'lastname']),
+    practiceArea: ci(['practice area']),
+    date:         ci(['date']),
+    appt:         ci(['appointment scheduled', 'appointment']),
+    office:       ci(['office location', 'office']),
+    intakeMember: ci(['intake team member', 'intake member', 'intake']),
+  };
+
+  console.log('[WeeklyLeadsReport] Column map:', COL);
+
+  // ── Parse data rows ─────────────────────────────────────────────────────
+  const rows = [];
+  let countPNC = 0, countNQ = 0, countSkippedStatus = 0, countSkippedDate = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cells = parseCSVRow(line);
+
+    // ── Normalize the status value:
+    //    1. Grab raw cell value
+    //    2. Trim whitespace from both ends
+    //    3. Collapse multiple internal spaces into one
+    //    4. Convert to lowercase for matching
+    const rawStatus = (cells[COL.status] || '');
+    const normStatus = normalizeStatus(rawStatus);
+
+    if (!normStatus) {
+      countSkippedStatus++;
+      continue; // not PNC or NQ — skip
+    }
+
+    const rawDate = (cells[COL.date] || '').trim();
+    const dateObj = parseDate(rawDate);
+    if (!dateObj || dateObj.getFullYear() !== 2026) {
+      countSkippedDate++;
+      continue; // invalid date or not 2026
+    }
+
+    if (normStatus === 'PNC') countPNC++;
+    else countNQ++;
+
+    rows.push({
+      status:       normStatus,
+      source:       (cells[COL.source]       || '').trim(),
+      firstName:    (cells[COL.firstName]     || '').trim(),
+      lastName:     (cells[COL.lastName]      || '').trim(),
+      practiceArea: (cells[COL.practiceArea]  || '').trim(),
+      date:         dateObj,
+      appt:         (cells[COL.appt]          || '').trim(),
+      office:       (cells[COL.office]        || '').trim(),
+      intakeMember: (cells[COL.intakeMember]  || '').trim() || 'Unknown',
+    });
+  }
+
+  // ── Console summary ─────────────────────────────────────────────────────
+  console.log('─────────────────────────────────────────────');
+  console.log(`[WeeklyLeadsReport] ✅ Parsing complete`);
+  console.log(`[WeeklyLeadsReport] 📋 Total rows parsed (accepted):   ${rows.length}`);
+  console.log(`[WeeklyLeadsReport] 🟢 Total PNC counted:              ${countPNC}`);
+  console.log(`[WeeklyLeadsReport] 🔴 Total No Qualified counted:     ${countNQ}`);
+  console.log(`[WeeklyLeadsReport] ⏭  Rows skipped (other status):   ${countSkippedStatus}`);
+  console.log(`[WeeklyLeadsReport] ⏭  Rows skipped (bad/non-2026 date): ${countSkippedDate}`);
+  console.log('─────────────────────────────────────────────');
+
+  return rows;
+}
+
+/** Parse a single CSV row, handling quoted fields with commas */
+function parseCSVRow(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      result.push(cur); cur = '';
+    } else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+/**
+ * Normalize a raw status cell value and classify it.
+ * Steps:
+ *   1. Trim leading/trailing whitespace
+ *   2. Collapse multiple internal spaces into a single space
+ *   3. Convert to lowercase
+ *   4. Match against "pnc" or "no qualified" substrings
+ * Returns: 'PNC' | 'NQ' | null
+ */
+function normalizeStatus(raw) {
+  // Step 1–3: clean the string
+  const s = raw.trim().replace(/\s+/g, ' ').toLowerCase();
+  // Step 4: classify
+  if (s.includes('pnc'))          return 'PNC';
+  if (s.includes('no qualified')) return 'NQ';
+  return null; // any other value is ignored
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  // Try ISO: 2026-01-15
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // Try MM/DD/YYYY or M/D/YYYY
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[1]-1, +m[2]);
+  // Try DD-MM-YYYY
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  return null;
+}
+
+// ─── WEEK / MONTH CALCULATION ──────────────────────────────────────────────
+/**
+ * Build all Mon–Fri work weeks for 2026 from Jan 1 up to and including
+ * the most recent FULLY COMPLETED week (ended last Friday).
+ */
+function buildWeeks() {
+  const weeks = [];
+  // Find first Monday of 2026 or Jan 1 if it's a weekday
+  // Week 1: starts from Jan 1, adjusted to Monday if Jan 1 is mid-week.
+  // Per spec: "if Jan 1 is midweek, adjust to first Monday"
+  const jan1 = new Date(2026, 0, 1);
+  const jan1Day = jan1.getDay(); // 0=Sun,1=Mon,...,6=Sat
+
+  let weekStart;
+  if (jan1Day === 0) weekStart = new Date(2026, 0, 2);       // Sun → Mon Jan 2
+  else if (jan1Day === 1) weekStart = new Date(2026, 0, 1);  // Mon → Jan 1
+  else if (jan1Day === 6) weekStart = new Date(2026, 0, 3);  // Sat → Mon Jan 3
+  else weekStart = new Date(2026, 0, 1);  // Mon–Fri: include partial first week starting Jan 1
+
+  // Actually per spec, if Jan 1 is midweek we start from THAT week's Monday
+  if (jan1Day >= 2 && jan1Day <= 5) {
+    // Jan 1 is Tue-Fri, week starts previous Monday
+    weekStart = new Date(2026, 0, 1 - (jan1Day - 1));
+  }
+
+  // Last fully completed week: Friday must be <= today - (today's weekday offset to last Friday)
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const todayDay = today.getDay(); // 0=Sun
+  // Days since last Friday
+  const daysToLastFri = todayDay === 0 ? 2 : todayDay === 6 ? 1 : todayDay + 2;
+  const lastFri = new Date(today);
+  lastFri.setDate(today.getDate() - (todayDay === 5 ? 7 : (todayDay === 0 ? 8 : todayDay + 2)));
+  // Actually: last completed Friday = most recent Friday that is strictly before today
+  // If today is Saturday/Sunday the last completed Friday is the previous Fri.
+  // If today is Mon-Fri the last completed week ended last Friday.
+  const lastCompletedFriday = getLastCompletedFriday(today);
+
+  let ws = new Date(weekStart);
+  while (true) {
+    const we = new Date(ws); we.setDate(ws.getDate() + 4); // Friday
+    if (we > lastCompletedFriday) break;
+    // Only include 2026 weeks
+    if (ws.getFullYear() > 2026) break;
+    weeks.push({
+      key:   fmtKey(ws),
+      label: fmtWeekLabel(ws, we),
+      start: new Date(ws),
+      end:   new Date(we),
+    });
+    ws.setDate(ws.getDate() + 7);
+  }
+  return weeks;
+}
+
+function getLastCompletedFriday(today) {
+  const d = new Date(today);
+  const day = d.getDay(); // 0=Sun
+  // Go back to find last Friday that is fully complete (strictly before today's date)
+  let offset;
+  if (day === 0) offset = 2;       // Sun → last Fri = 2 days ago
+  else if (day === 1) offset = 3;  // Mon → last Fri = 3 days ago
+  else if (day === 2) offset = 4;
+  else if (day === 3) offset = 5;
+  else if (day === 4) offset = 6;
+  else if (day === 5) offset = 7;  // Today is Fri → last completed Fri = 7 days ago
+  else offset = 1;                  // Sat → Fri was yesterday
+  d.setDate(d.getDate() - offset);
+  return d;
+}
+
+function fmtKey(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function fmtWeekLabel(start, end) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const s = `${months[start.getMonth()]} ${start.getDate()}`;
+  const e = `${months[end.getMonth()]} ${end.getDate()}`;
+  return `${s} – ${e}, ${start.getFullYear()}`;
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function buildMonths() {
+  const seen = new Set();
+  const months = [];
+  const monthNames = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+  RAW_DATA.forEach(r => {
+    const y = r.date.getFullYear(), m = r.date.getMonth();
+    const key = `${y}-${pad(m+1)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      months.push({ key, year: y, month: m, label: `${monthNames[m]} ${y}` });
+    }
+  });
+  months.sort((a,b) => a.key.localeCompare(b.key));
+  return months;
+}
+
+// ─── INIT DASHBOARD ────────────────────────────────────────────────────────
+function initDashboard() {
+  WEEKS  = buildWeeks();
+  MONTHS = buildMonths();
+
+  // Default to most recent completed week
+  currentWeekIdx = Math.max(0, WEEKS.length - 1);
+
+  // Populate week selector
+  const ws = document.getElementById('week-selector');
+  ws.innerHTML = '';
+  WEEKS.forEach((w, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = w.label;
+    ws.appendChild(opt);
+  });
+  ws.value = currentWeekIdx;
+
+  // Populate month selector
+  const ms = document.getElementById('month-selector');
+  ms.innerHTML = '';
+  MONTHS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.key;
+    opt.textContent = m.label;
+    ms.appendChild(opt);
+  });
+  if (MONTHS.length) ms.value = MONTHS[MONTHS.length-1].key;
+
+  // Populate member filters
+  const members = getUniqueMembers();
+  ['w-member-filter','m-member-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '<option value="">All Members</option>';
+    members.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = m;
+      el.appendChild(o);
+    });
+  });
+
+  // Update header status
+  document.getElementById('data-status-text').textContent =
+    `${RAW_DATA.length} records · ${WEEKS.length} weeks · ${MONTHS.length} months`;
+
+  // Show app
+  document.getElementById('upload-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  renderWeekly();
+  renderMonthly();
+}
+
+function getUniqueMembers() {
+  const s = new Set(RAW_DATA.map(r => r.intakeMember));
+  return [...s].sort();
+}
+
+// ─── TAB SWITCHING ─────────────────────────────────────────────────────────
+function switchTab(page) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.getElementById(`page-${page}`).classList.add('active');
+}
+
+// ─── WEEK NAVIGATION ───────────────────────────────────────────────────────
+function onWeekChange() {
+  currentWeekIdx = +document.getElementById('week-selector').value;
+  renderWeekly();
+}
+function prevWeek() {
+  if (currentWeekIdx > 0) {
+    currentWeekIdx--;
+    document.getElementById('week-selector').value = currentWeekIdx;
+    renderWeekly();
+  }
+}
+function nextWeek() {
+  if (currentWeekIdx < WEEKS.length-1) {
+    currentWeekIdx++;
+    document.getElementById('week-selector').value = currentWeekIdx;
+    renderWeekly();
+  }
+}
+
+// ─── FILTER HELPERS ────────────────────────────────────────────────────────
+function filterByWeek(weekIdx, memberFilter) {
+  if (weekIdx < 0 || weekIdx >= WEEKS.length) return [];
+  const w = WEEKS[weekIdx];
+  return RAW_DATA.filter(r => {
+    const d = r.date;
+    const inWeek = d >= w.start && d <= w.end;
+    const inMem  = !memberFilter || r.intakeMember === memberFilter;
+    return inWeek && inMem;
+  });
+}
+
+function filterByMonth(monthKey, memberFilter) {
+  const mo = MONTHS.find(m => m.key === monthKey);
+  if (!mo) return [];
+  return RAW_DATA.filter(r => {
+    const y = r.date.getFullYear(), m = r.date.getMonth();
+    const inMo  = y === mo.year && m === mo.month;
+    const inMem = !memberFilter || r.intakeMember === memberFilter;
+    return inMo && inMem;
+  });
+}
+
+function calcMetrics(rows) {
+  const total = rows.length;
+  const pnc   = rows.filter(r => r.status === 'PNC').length;
+  const nq    = rows.filter(r => r.status === 'NQ').length;
+
+  // ── PNC Scheduled: rows that are PNC AND have an appointment scheduled
+  //    Appointment column value must include "phone appointment" or "in person appointment"
+  //    (case-insensitive, whitespace-tolerant)
+  const pncScheduled = rows.filter(r => {
+    if (r.status !== 'PNC') return false;
+    const appt = r.appt.trim().replace(/\s+/g, ' ').toLowerCase();
+    return appt.includes('phone appointment') || appt.includes('in person appointment');
+  }).length;
+
+  // ── KPI: (PNC Scheduled / Total PNC) × 100
+  //    NQ does NOT affect this metric at all.
+  const scheduledKpi = pnc > 0 ? ((pncScheduled / pnc) * 100) : null;
+
+  return {
+    total, pnc, nq, pncScheduled,
+    scheduledKpi,                                              // null if no PNC rows
+    pncPct:  total ? ((pnc  / total) * 100).toFixed(1) : '0.0',  // volume share
+    nqPct:   total ? ((nq   / total) * 100).toFixed(1) : '0.0',
+  };
+}
+
+function calcMemberBreakdown(rows) {
+  const map = {};
+  rows.forEach(r => {
+    if (!map[r.intakeMember]) map[r.intakeMember] = {pnc:0, nq:0, total:0};
+    map[r.intakeMember].total++;
+    if (r.status === 'PNC') map[r.intakeMember].pnc++;
+    else map[r.intakeMember].nq++;
+  });
+  return Object.entries(map).map(([name, v]) => ({name, ...v}));
+}
+
+// ─── RENDER WEEKLY ─────────────────────────────────────────────────────────
+function renderWeekly() {
+  if (!WEEKS.length) return;
+  const memberFilter = document.getElementById('w-member-filter').value;
+  const rows    = filterByWeek(currentWeekIdx, memberFilter);
+  const prevRows= filterByWeek(currentWeekIdx-1, memberFilter);
+  const cur     = calcMetrics(rows);
+  const prev    = calcMetrics(prevRows);
+
+  // Nav button states
+  document.getElementById('btn-prev-week').disabled = currentWeekIdx === 0;
+  document.getElementById('btn-next-week').disabled = currentWeekIdx >= WEEKS.length-1;
+
+  // ── Metrics
+  const container = document.getElementById('w-metrics');
+  container.innerHTML = `
+    ${metricCard('Total Leads',           cur.total,          prev.total,         'mc-total', false)}
+    ${metricCard('PNC',                   cur.pnc,            prev.pnc,           'mc-pnc',   false)}
+    ${metricCard('No Qualified',          cur.nq,             prev.nq,            'mc-nq',    true)}
+    ${metricCard('PNC Share % (Volume)',  cur.pncPct+'%',     prev.pncPct+'%',    'mc-pnc-pct', false, true)}
+    ${metricCard('NQ %',                  cur.nqPct+'%',      prev.nqPct+'%',     'mc-nq-pct',  true,  true)}
+    ${kpiCard(cur, prev)}
+  `;
+
+  // ── Bar chart: PNC vs NQ
+  destroyChart(chartWBar);
+  chartWBar = new Chart(document.getElementById('chart-w-bar'), {
+    type: 'bar',
+    data: {
+      labels: ['PNC', 'No Qualified'],
+      datasets: [{
+        data: [cur.pnc, cur.nq],
+        backgroundColor: [C_GREEN, C_RED],
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: barOpts('Leads'),
+  });
+
+  // ── Line chart: PNC trend last 6 weeks
+  const trendData = [];
+  const trendLabels = [];
+  for (let i = Math.max(0, currentWeekIdx-5); i <= currentWeekIdx; i++) {
+    const wRows = filterByWeek(i, memberFilter);
+    const m = calcMetrics(wRows);
+    trendData.push(m.pnc);
+    const w = WEEKS[i];
+    const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    trendLabels.push(`${ms[w.start.getMonth()]} ${w.start.getDate()}`);
+  }
+
+  destroyChart(chartWTrend);
+  chartWTrend = new Chart(document.getElementById('chart-w-trend'), {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'PNC',
+        data: trendData,
+        borderColor: C_GREEN,
+        backgroundColor: 'rgba(26,122,86,.1)',
+        pointBackgroundColor: C_GREEN,
+        pointRadius: 5,
+        tension: .35,
+        fill: true,
+      }]
+    },
+    options: lineOpts('PNC Count'),
+  });
+
+  // ── Stacked bar: members
+  const members = calcMemberBreakdown(rows);
+  destroyChart(chartWMembers);
+  chartWMembers = new Chart(document.getElementById('chart-w-members'), {
+    type: 'bar',
+    data: {
+      labels: members.map(m => m.name),
+      datasets: [
+        { label:'PNC', data: members.map(m=>m.pnc), backgroundColor: C_GREEN, borderRadius: 3 },
+        { label:'NQ',  data: members.map(m=>m.nq),  backgroundColor: C_RED,   borderRadius: 3 },
+      ]
+    },
+    options: stackedBarOpts(),
+  });
+
+  // ── PNC list table (auto-updates with week + member filter)
+  renderPNCList();
+}
+
+// ─── RENDER MONTHLY ────────────────────────────────────────────────────────
+function renderMonthly() {
+  const monthKey    = document.getElementById('month-selector').value;
+  const memberFilter= document.getElementById('m-member-filter').value;
+  if (!monthKey) return;
+
+  const rows = filterByMonth(monthKey, memberFilter);
+  const cur  = calcMetrics(rows);
+
+  // ── Metrics
+  document.getElementById('m-metrics').innerHTML = `
+    ${metricCard('Total Leads',          cur.total,       null, 'mc-total')}
+    ${metricCard('PNC',                  cur.pnc,         null, 'mc-pnc')}
+    ${metricCard('No Qualified',         cur.nq,          null, 'mc-nq')}
+    ${metricCard('PNC Share % (Volume)', cur.pncPct+'%',  null, 'mc-pnc-pct')}
+    ${metricCard('NQ %',                 cur.nqPct+'%',   null, 'mc-nq-pct')}
+    ${kpiCard(cur, null)}
+  `;
+
+  // ── Weekly breakdown table
+  const mo = MONTHS.find(m => m.key === monthKey);
+  const weeksInMonth = WEEKS.filter(w =>
+    w.start.getFullYear() === mo.year && w.start.getMonth() === mo.month ||
+    w.end.getFullYear()   === mo.year && w.end.getMonth()   === mo.month
+  );
+
+  const tableRows = weeksInMonth.map(w => {
+    const wRows = rows.filter(r => r.date >= w.start && r.date <= w.end);
+    const m = calcMetrics(wRows);
+    const kpiVal  = m.scheduledKpi !== null ? m.scheduledKpi.toFixed(1) + '%' : '—';
+    const kpiCls  = m.scheduledKpi === null ? '' :
+                    m.scheduledKpi >= 90 ? 'style="color:var(--green);font-weight:700;"' :
+                    m.scheduledKpi >= 80 ? 'style="color:#b07d10;font-weight:700;"' :
+                                           'style="color:var(--red);font-weight:700;"';
+    return `<tr>
+      <td>${w.label}</td>
+      <td>${m.total}</td>
+      <td><span class="badge badge-pnc">${m.pnc}</span></td>
+      <td><span class="badge badge-nq">${m.nq}</span></td>
+      <td>${m.pncScheduled}</td>
+      <td ${kpiCls}>${kpiVal}</td>
+      <td>${m.pncPct}%</td>
+      <td>${m.nqPct}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('m-week-table').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Week</th><th>Total</th><th>PNC</th><th>No Qualified</th>
+        <th>PNC Scheduled</th><th>Scheduled KPI %</th><th>PNC Share %</th><th>NQ %</th>
+      </tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">No data for this period.</td></tr>'}</tbody>
+    </table>
+  `;
+
+  // ── Weekly trend chart
+  const wLabels = [], wPNC = [], wNQ = [];
+  weeksInMonth.forEach(w => {
+    const wRows = rows.filter(r => r.date >= w.start && r.date <= w.end);
+    const m = calcMetrics(wRows);
+    const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    wLabels.push(`${ms[w.start.getMonth()]} ${w.start.getDate()}`);
+    wPNC.push(m.pnc); wNQ.push(m.nq);
+  });
+
+  destroyChart(chartMTrend);
+  chartMTrend = new Chart(document.getElementById('chart-m-trend'), {
+    type: 'bar',
+    data: {
+      labels: wLabels,
+      datasets: [
+        { label:'PNC', data: wPNC, backgroundColor: C_GREEN, borderRadius: 4 },
+        { label:'NQ',  data: wNQ,  backgroundColor: C_RED,   borderRadius: 4 },
+      ]
+    },
+    options: stackedBarOpts(),
+  });
+
+  // ── Member contribution (doughnut-style bar)
+  const members = calcMemberBreakdown(rows);
+  destroyChart(chartMMem);
+  chartMMem = new Chart(document.getElementById('chart-m-members'), {
+    type: 'bar',
+    data: {
+      labels: members.map(m => m.name),
+      datasets: [
+        { label:'PNC', data: members.map(m=>m.pnc), backgroundColor: MEMBER_COLORS.map((c,i)=>c), borderRadius:3 },
+        { label:'NQ',  data: members.map(m=>m.nq),  backgroundColor: MEMBER_COLORS.map(c=>c+'88'), borderRadius:3 },
+      ]
+    },
+    options: stackedBarOpts(),
+  });
+}
+
+// ─── METRIC CARD HTML ──────────────────────────────────────────────────────
+function metricCard(label, value, prevValue, cls, invertDelta=false, isPct=false) {
+  let deltaHtml = '';
+  if (prevValue !== null && prevValue !== undefined) {
+    const cur  = parseFloat(String(value));
+    const prv  = parseFloat(String(prevValue));
+    const diff = cur - prv;
+    const pct  = prv !== 0 ? ((diff/prv)*100).toFixed(1) : (diff > 0 ? '+∞' : '0');
+    const goodDir = invertDelta ? diff < 0 : diff > 0;
+    const dClass = diff === 0 ? 'delta-flat' : goodDir ? 'delta-up' : 'delta-down';
+    const arrow  = diff === 0 ? '→' : diff > 0 ? '▲' : '▼';
+    const sign   = diff > 0 ? '+' : '';
+    deltaHtml = `<div class="metric-delta ${dClass}">${arrow} ${sign}${isPct ? diff.toFixed(1)+'%' : diff} (${sign}${pct}%)</div>`;
+  }
+  return `
+    <div class="metric-card ${cls}">
+      <div class="metric-label">${label}</div>
+      <div class="metric-value">${value}</div>
+      ${prevValue !== null && prevValue !== undefined
+        ? `<div class="metric-sub">vs prev: ${prevValue}</div>`
+        : ''}
+      ${deltaHtml}
+    </div>
+  `;
+}
+
+// ─── KPI CARD HTML ─────────────────────────────────────────────────────────
+/**
+ * Renders the "Scheduled Performance %" KPI card.
+ * Formula: (PNC Scheduled / Total PNC) × 100
+ * Goal: 90%
+ * Color: green ≥ 90%, yellow 80–89%, red < 80%
+ * NQ has ZERO effect on this metric.
+ *
+ * @param {object} cur  - calcMetrics() result for current period
+ * @param {object|null} prev - calcMetrics() result for previous period (or null)
+ */
+function kpiCard(cur, prev) {
+  const GOAL = 90;
+  const kpi  = cur.scheduledKpi;          // null if no PNC rows exist
+  const val  = kpi !== null ? kpi.toFixed(1) + '%' : '—';
+
+  // Colour tier
+  let tierCls = '';
+  let tierLabel = '';
+  if (kpi === null) {
+    tierCls   = '';           // default dark-green header look
+    tierLabel = 'No PNC data';
+  } else if (kpi >= GOAL) {
+    tierCls   = 'kpi-green';
+    tierLabel = '✅ On target';
+  } else if (kpi >= 80) {
+    tierCls   = 'kpi-yellow';
+    tierLabel = '⚠ Below target';
+  } else {
+    tierCls   = 'kpi-red';
+    tierLabel = '🔴 Needs attention';
+  }
+
+  // Progress bar fill (cap at 100%)
+  const fillPct = kpi !== null ? Math.min(kpi, 100).toFixed(1) : 0;
+
+  // Delta vs previous period
+  let deltaHtml = '';
+  if (prev !== null && prev !== undefined && prev.scheduledKpi !== null && kpi !== null) {
+    const diff    = kpi - prev.scheduledKpi;
+    const sign    = diff > 0 ? '+' : '';
+    const dClass  = diff === 0 ? 'delta-flat' : diff > 0 ? 'delta-up' : 'delta-down';
+    const arrow   = diff === 0 ? '→' : diff > 0 ? '▲' : '▼';
+    deltaHtml = `
+      <div class="metric-delta ${dClass}" style="margin-top:6px;">
+        ${arrow} ${sign}${diff.toFixed(1)}% vs prev week
+      </div>`;
+  }
+
+  return `
+    <div class="metric-card mc-kpi ${tierCls}" style="grid-column: span 1;">
+      <div class="metric-label">Scheduled Performance %</div>
+      <div class="metric-value">${val}</div>
+      <div class="metric-sub">
+        ${cur.pncScheduled} scheduled / ${cur.pnc} PNC &nbsp;·&nbsp; Goal: ${GOAL}%
+      </div>
+      <div class="kpi-goal-bar-wrap">
+        <div class="kpi-goal-bar" style="width:${fillPct}%;"></div>
+      </div>
+      <div class="kpi-goal-label">${tierLabel}</div>
+      ${deltaHtml}
+    </div>
+  `;
+}
+const baseFont = { family: "'Source Sans 3', sans-serif", size: 11 };
+const gridColor = '#e8eaed';
+
+function barOpts(yLabel='') {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid:{color:gridColor}, ticks:{font:baseFont, color:'#6b7585'} },
+      y: { grid:{color:gridColor}, ticks:{font:baseFont, color:'#6b7585'},
+           title:{display:!!yLabel, text:yLabel, font:baseFont, color:'#6b7585'} }
+    }
+  };
+}
+
+function lineOpts(yLabel='') {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid:{color:gridColor}, ticks:{font:baseFont, color:'#6b7585'} },
+      y: { grid:{color:gridColor}, ticks:{font:baseFont, color:'#6b7585'}, beginAtZero:true,
+           title:{display:!!yLabel, text:yLabel, font:baseFont, color:'#6b7585'} }
+    }
+  };
+}
+
+function stackedBarOpts() {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display:true, position:'top',
+        labels: { font:baseFont, color:'#2c3340', boxWidth:12, padding:12 }
+      }
+    },
+    scales: {
+      x: { stacked:true, grid:{display:false}, ticks:{font:baseFont, color:'#6b7585', maxRotation:35} },
+      y: { stacked:true, grid:{color:gridColor}, ticks:{font:baseFont, color:'#6b7585'}, beginAtZero:true }
+    }
+  };
+}
+
+function destroyChart(c) { if (c) { try { c.destroy(); } catch(e){} } }
+
+// ─── PNC LIST TABLE ───────────────────────────────────────────────────────
+/**
+ * Renders the PNC List table for the selected week + member filter.
+ * Also applies the active search filter and current sort state.
+ * Called automatically by renderWeekly() and also triggered by the search input.
+ */
+function renderPNCList() {
+  if (!WEEKS.length) return;
+
+  const memberFilter = document.getElementById('w-member-filter').value;
+  const searchRaw    = (document.getElementById('pnc-search').value || '').trim().toLowerCase();
+
+  // 1. Get all PNC rows for this week + member filter
+  const weekRows = filterByWeek(currentWeekIdx, memberFilter);
+  let pncRows = weekRows.filter(r => r.status === 'PNC');
+
+  // 2. Apply name search (first name OR last name contains query)
+  if (searchRaw) {
+    pncRows = pncRows.filter(r => {
+      const fullName = (r.firstName + ' ' + r.lastName).toLowerCase();
+      return fullName.includes(searchRaw)
+          || r.firstName.toLowerCase().includes(searchRaw)
+          || r.lastName.toLowerCase().includes(searchRaw);
+    });
+  }
+
+  // 3. Sort
+  pncRows = sortRows(pncRows, pncSortCol, pncSortDir);
+
+  // 4. Update count badge
+  const total = filterByWeek(currentWeekIdx, memberFilter).filter(r => r.status === 'PNC').length;
+  document.getElementById('pnc-list-count').textContent =
+    searchRaw
+      ? `${pncRows.length} of ${total} leads`
+      : `${total} lead${total !== 1 ? 's' : ''}`;
+
+  // 5. Update search info text
+  document.getElementById('pnc-search-info').textContent =
+    searchRaw && pncRows.length === 0
+      ? 'No results matching "' + document.getElementById('pnc-search').value.trim() + '"'
+      : '';
+
+  // 6. Update sort icons in header
+  document.querySelectorAll('#pnc-list-table thead th.sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    const col  = th.dataset.col;
+    th.classList.remove('sort-asc', 'sort-desc');
+    icon.className = 'sort-icon sort-icon-none';
+    if (col === pncSortCol) {
+      th.classList.add(pncSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+      icon.className = 'sort-icon ' + (pncSortDir === 'asc' ? 'sort-icon-asc' : 'sort-icon-desc');
+    }
+  });
+
+  // 7. Render tbody
+  const tbody = document.getElementById('pnc-list-body');
+  if (!pncRows.length) {
+    tbody.innerHTML = `
+      <tr><td colspan="7" style="text-align:center;padding:36px;color:var(--text-muted);">
+        ${searchRaw ? 'No PNC leads match your search.' : 'No PNC leads found for this week.'}
+      </td></tr>`;
+    return;
+  }
+
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  tbody.innerHTML = pncRows.map(r => {
+    // Format date
+    const d = r.date instanceof Date ? r.date : new Date(r.date);
+    const dateStr = isNaN(d.getTime())
+      ? '—'
+      : `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+
+    // Appointment styling
+    const apptNorm = r.appt.trim().replace(/\s+/g,' ').toLowerCase();
+    const isScheduled = apptNorm.includes('phone appointment') || apptNorm.includes('in person appointment');
+    const apptDisplay = r.appt || '—';
+    const apptClass   = isScheduled ? 'appt-scheduled' : 'appt-unscheduled';
+
+    // Highlight search match in name
+    const fn = highlightMatch(escapeHtml(r.firstName), searchRaw);
+    const ln = highlightMatch(escapeHtml(r.lastName),  searchRaw);
+
+    return `<tr>
+      <td>${dateStr}</td>
+      <td>${fn}</td>
+      <td>${ln}</td>
+      <td>${escapeHtml(r.practiceArea) || '—'}</td>
+      <td class="${apptClass}">${escapeHtml(apptDisplay)}</td>
+      <td>${escapeHtml(r.office) || '—'}</td>
+      <td>${escapeHtml(r.intakeMember)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/**
+ * Sort handler — called when a column header is clicked.
+ * Toggles direction if the same column is clicked again.
+ */
+function sortPNCList(col) {
+  if (pncSortCol === col) {
+    pncSortDir = pncSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    pncSortCol = col;
+    pncSortDir = 'asc';
+  }
+  renderPNCList();
+}
+
+/**
+ * Sort an array of row objects by a given column key and direction.
+ */
+function sortRows(rows, col, dir) {
+  return [...rows].sort((a, b) => {
+    let va = a[col], vb = b[col];
+
+    // Special case: date comparison
+    if (col === 'date') {
+      va = va instanceof Date ? va.getTime() : new Date(va).getTime();
+      vb = vb instanceof Date ? vb.getTime() : new Date(vb).getTime();
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+
+    // String comparison (case-insensitive)
+    va = String(va || '').toLowerCase();
+    vb = String(vb || '').toLowerCase();
+    if (va < vb) return dir === 'asc' ? -1 :  1;
+    if (va > vb) return dir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+/**
+ * Escape HTML special characters to prevent XSS in rendered cells.
+ */
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Wrap matched substring in a highlight span.
+ */
+function highlightMatch(escapedStr, query) {
+  if (!query) return escapedStr;
+  const idx = escapedStr.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return escapedStr;
+  return (
+    escapedStr.slice(0, idx) +
+    '<mark style="background:#fff3b0;border-radius:2px;padding:0 1px;">' +
+    escapedStr.slice(idx, idx + query.length) +
+    '</mark>' +
+    escapedStr.slice(idx + query.length)
+  );
+}
+
+/**
+ * Export the currently visible (filtered + sorted) PNC list to CSV.
+ * Filename: pnc-list-[week-label].csv
+ */
+function exportPNCListCSV() {
+  if (!WEEKS.length) return;
+
+  const memberFilter = document.getElementById('w-member-filter').value;
+  const searchRaw    = (document.getElementById('pnc-search').value || '').trim().toLowerCase();
+
+  // Replicate the same filter + sort logic as renderPNCList
+  let pncRows = filterByWeek(currentWeekIdx, memberFilter).filter(r => r.status === 'PNC');
+  if (searchRaw) {
+    pncRows = pncRows.filter(r =>
+      (r.firstName + ' ' + r.lastName).toLowerCase().includes(searchRaw)
+    );
+  }
+  pncRows = sortRows(pncRows, pncSortCol, pncSortDir);
+
+  if (!pncRows.length) {
+    alert('No PNC leads to export for the current selection.');
+    return;
+  }
+
+  // Build CSV
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const headers = ['Date','First Name','Last Name','Practice Area','Was The Appointment Scheduled?','Office Location','Intake Team Member'];
+
+  const csvRows = [
+    headers.join(','),
+    ...pncRows.map(r => {
+      const d = r.date instanceof Date ? r.date : new Date(r.date);
+      const dateStr = isNaN(d.getTime())
+        ? ''
+        : `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+      return [
+        csvCell(dateStr),
+        csvCell(r.firstName),
+        csvCell(r.lastName),
+        csvCell(r.practiceArea),
+        csvCell(r.appt),
+        csvCell(r.office),
+        csvCell(r.intakeMember),
+      ].join(',');
+    })
+  ];
+
+  const csvString = csvRows.join('\r\n');
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+
+  // Derive a clean filename from the week label
+  const weekLabel = WEEKS[currentWeekIdx]
+    ? WEEKS[currentWeekIdx].label.replace(/[^a-zA-Z0-9]+/g, '-').replace(/-+$/,'').toLowerCase()
+    : 'week';
+  const filename = `pnc-list-${weekLabel}.csv`;
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Wrap a CSV cell value in quotes, escaping any internal quotes.
+ */
+function csvCell(val) {
+  const s = String(val || '').replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+// ─── PDF EXPORT ────────────────────────────────────────────────────────────
+function downloadPDF() {
+  // Setting document.title before print causes most browsers to use it as the PDF filename
+  const originalTitle = document.title;
+  document.title = 'weekly-leads-report-2026';
+  window.print();
+  // Restore title after print dialog closes
+  setTimeout(() => { document.title = originalTitle; }, 1000);
+}
+
+</script>
+
+<!-- Print styles for PDF export -->
+<style>
+@media print {
+  #upload-overlay { display: none !important; }
+  header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tabs-bar { display: none; }
+  .page { display: block !important; page-break-before: always; }
+  .page:first-of-type { page-break-before: auto; }
+  .toolbar { display: none; }
+  .header-actions { display: none; }
+  @page { margin: 1cm; }
+}
+</style>
+
+</body>
+</html>
